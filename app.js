@@ -99,6 +99,11 @@ app.post("/applistsearch", (req, res) => {
 
 
 
+
+
+
+  
+
 // Leave Credit service
 app.post('/leavecredit', (req, res) => {
   const query = "SELECT * FROM leave_type WHERE active = 1";
@@ -167,23 +172,66 @@ app.post('/applist', (req, res) => {
 app.post('/newrecords', (req, res) => {
   console.log(req.body);
 
-  const { emp_id, leave_type_id, day_type, start_date, end_date, total_days, reasons, leave_status, active } = req.body;
-  const query = "insert into records (emp_id,leave_type_id,day_type,start_date,end_date,total_days,reasons,leave_status,active,created_by,updated_by) values (?,?,?,?,?,?,?,?,?,?,?) ";
+  const {
+    emp_id,
+    leave_type_id,
+    day_type,
+    start_date,
+    end_date,
+    total_days,
+    reasons,
+    leave_status,
+    active,
+  } = req.body;
 
-  con.query(query, [emp_id, leave_type_id, day_type, start_date, end_date, total_days, reasons, leave_status, active, emp_id, emp_id], (err, results) => {
+  // Default leave_type_id to 0 if not provided
+  const leaveTypeId = leave_type_id && leave_type_id.trim() !== '' ? leave_type_id : 0;
+
+  const query = `
+    INSERT INTO records 
+    (emp_id, leave_type_id, day_type, start_date, end_date, total_days, reasons, leave_status, active, created_by, updated_by) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  con.query(
+    query,
+    [emp_id, leaveTypeId, day_type, start_date, end_date, total_days, reasons, leave_status, active, emp_id, emp_id],
+    (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ message: "Error inserting record", success: false });
+      }
+
+      console.log("Rows affected:", results.affectedRows);
+
+      if (results.affectedRows > 0) {
+        res.status(200).json({ message: "Record added successfully", success: true });
+      } else {
+        res.status(200).json({ message: "No records inserted", success: false });
+      }
+    }
+  );
+});
+
+
+
+
+// app.get('/leaveoptions')
+app.get('/leaveoptions', (req, res) => {
+  const query = `SELECT leave_type_id, leave_type_terms AS name FROM leave_type WHERE active = 1`; // Assuming active = 1 means the leave option is available
+  
+  con.query(query, (err, results) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Error fetching application list", success: false });
+      console.error("Error fetching leave options:", err);
+      return res.status(500).json({ message: "Error fetching leave options", success: false });
     }
-    console.log(results.affectedRows);
 
-    if (results.affectedRows > 0) {
-      res.status(200).json({ message: "Query Results", success: true });
-    } else {
-      res.status(200).json({ message: "No applications found", success: false });
-    }
+    res.status(200).json({ success: true, leaveOptions: results });
   });
 });
+
+
+
 
 
 
@@ -256,6 +304,7 @@ app.post('/remove_records', (req, res) => {
     }
   });
 });
+
 
 
 
