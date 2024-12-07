@@ -126,15 +126,17 @@ app.post('/leavecredit', (req, res) => {
 
 // Records service
 app.post('/records', (req, res) => {
+  const { emp_id } = req.body;
+
   const query = `
     SELECT r.records_id, r.emp_id, r.leave_type_id, lt.leave_type AS leave_type_name, 
            r.day_type, r.start_date, r.total_days, r.active, r.reasons, 
            CONCAT(lt.leave_type, '-', lt.leave_type_terms) AS leave_full_name  
     FROM records r 
     INNER JOIN leave_type lt ON r.leave_type_id = lt.leave_type_id
-    where r.active=1 `;
+    where r.active=1 and emp_id = ?`;
 
-  con.query(query, (err, results) => {
+  con.query(query,[emp_id], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: "Error fetching records", success: false });
@@ -301,6 +303,34 @@ app.post('/remove_records', (req, res) => {
       res.status(200).json({ message: "Successful", success: true });
     } else {
       res.status(200).json({ message: "Invalid Employee", success: false });
+    }
+  });
+});
+
+
+app.post('/updateinfo', (req, res) => {
+  const { emp_id,firstname, lastname,username,password  } = req.body;
+ 
+  
+  if (!emp_id) {
+    return res.status(400).json({ message: "Missing required fields: records_id or emp_id", success: false });
+  }
+
+  const query = `
+    UPDATE employee
+    SET firstname = ?, lastname = ?, username = ?, password = ?
+    WHERE emp_id = ?`;
+
+  con.query(query, [firstname, lastname,username,password,emp_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error updating record", success: false });
+    }
+
+    if (results.affectedRows > 0) {
+      res.status(200).json({ message: "Record updated successfully", success: true });
+    } else {
+      res.status(404).json({ message: "Record not found or no changes made", success: false });
     }
   });
 });
